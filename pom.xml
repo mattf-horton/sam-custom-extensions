@@ -2,22 +2,21 @@
   
   	<modelVersion>4.0.0</modelVersion>
   	<groupId>hortonworks.hdf.sam.custom</groupId>
-  	<artifactId>sam-custom-extensions</artifactId>
-  	<version>0.0.5</version>
+  	<artifactId>sam-stellar-extensions</artifactId>
+  	<version>0.4.0-SNAPSHOT</version>
   	<packaging>pom</packaging>
 
 
   	<modules>
-  		<module>sam-custom-processor</module>
-  		<module>sam-custom-udf</module>
-  		<module>sam-custom-sink</module>
+  	    <module>sam-stellar-processor</module>
   	</modules>
   	
   	
 	<properties>
-		<streamline.version>0.5.0.3.0.0.0-452</streamline.version>
-		<slf4j.version>1.7.12</slf4j.version>
-		<junit.version>4.5</junit.version> 
+	    <streamline.version>0.5.0.3.0.0.0-453</streamline.version>
+	    <slf4j.version>1.7.12</slf4j.version>
+	    <junit.version>4.5</junit.version> 
+	    <stellar.version>0.4.0</stellar.version>
 	</properties>
 
 	<dependencies>
@@ -30,23 +29,37 @@
             <groupId>com.hortonworks.streamline</groupId>
             <artifactId>streamline-common</artifactId>
             <version>${streamline.version}</version>
-        </dependency>        
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
-    	  
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>${junit.version}</version>
-			<scope>test</scope>
-		</dependency>        
+        <dependency>
+            <groupId>org.apache.metron</groupId>
+            <artifactId>stellar-common</artifactId>
+            <version>${stellar.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+	<dependency>
+	    <groupId>junit</groupId>
+	    <artifactId>junit</artifactId>
+	    <version>${junit.version}</version>
+	    <scope>test</scope>
+	</dependency>        
     </dependencies>
-    
-	<repositories>
-		<repository>
+
+    <repositories>
+        <repository>
             <id>hortonworks.repo</id>
             <url>http://nexus-private.hortonworks.com/nexus/content/groups/public/</url>
             <name>Hortonworks Repo</name>
@@ -56,21 +69,20 @@
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
-        </repository>	
-	
-	</repositories>
-    
-	<build>
+        </repository>
+    </repositories>
+
+    <build>
         <plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<source>1.8</source>
-					<target>1.8</target>
-				</configuration>
-			</plugin>
-			        
+	    <plugin>
+		<groupId>org.apache.maven.plugins</groupId>
+		<artifactId>maven-compiler-plugin</artifactId>
+		<configuration>
+		    <source>1.8</source>
+		    <target>1.8</target>
+		</configuration>
+	    </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -81,18 +93,16 @@
                 <artifactId>maven-jar-plugin</artifactId>
             </plugin>
             
-		    <plugin>
-		      <artifactId>maven-assembly-plugin</artifactId>
-		      <version>2.6</version>
-		      <configuration>
-		
-		        <descriptorRefs>
-		          <descriptorRef>jar-with-dependencies</descriptorRef>
-		        </descriptorRefs>
-		      </configuration>
-		    </plugin>	            
+	    <plugin>
+	        <artifactId>maven-assembly-plugin</artifactId>
+		<version>2.6</version>
+		<configuration>
+		    <descriptorRefs>
+		      <descriptorRef>jar-with-dependencies</descriptorRef>
+		    </descriptorRefs>
+		</configuration>
+	    </plugin>	            
         </plugins>
     </build>    
-
   	
 </project>
