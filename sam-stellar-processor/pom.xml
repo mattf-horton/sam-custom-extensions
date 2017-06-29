@@ -8,7 +8,7 @@
   	</parent>
 
   	<artifactId>sam-stellar-processor</artifactId>
-  	<name>SAM Extension Stellar Processor</name>
+  	<name>sam-stellar-processor</name>
 
 	<properties>
 

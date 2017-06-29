@@ -38,6 +38,7 @@
         <dependency>
             <groupId>org.apache.metron</groupId>
             <artifactId>stellar-common</artifactId>
+            <classifier>uber</classifier>
             <version>${stellar.version}</version>
             <exclusions>
                 <exclusion>
@@ -95,12 +96,12 @@
             
 	    <plugin>
 	        <artifactId>maven-assembly-plugin</artifactId>
-		<version>2.6</version>
-		<configuration>
-		    <descriptorRefs>
-		      <descriptorRef>jar-with-dependencies</descriptorRef>
-		    </descriptorRefs>
-		</configuration>
+		    <version>2.6</version>
+		    <configuration>
+		       <descriptorRefs>
+		           <descriptorRef>jar-with-dependencies</descriptorRef>
+		       </descriptorRefs>
+		    </configuration>
 	    </plugin>	            
         </plugins>
     </build>    

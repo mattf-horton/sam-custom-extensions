@@ -50,7 +50,8 @@ import java.util.regex.Pattern;
  * to fields not named in enrichedOutputFields will be valid during the execution
  * of the Stellar statements (possibly masking original input field values), but
  * will not be persisted into the output event.  Variables with null values
- * at the end of execution will not be persisted into the output event.
+ * at the end of execution will not be persisted into the output event, unless
+ * they were already present as nulls in the input event.
  *
  * The syntax of the Stellar assignment statements is very specific.  They may
  * only be of the form:
@@ -62,6 +63,10 @@ import java.util.regex.Pattern;
  * a backslash terminates the logical line.  Continuation lines may start with an
  * indent, but the indent whitespace will be stripped.  If separating whitespace
  * is desired, put it before the backslash on the earlier line.
+ *
+ *     TEMPORARY HACK: Because the current SAM GUI doesn't provide editable text windows
+ *     for config input, only Strings, we allow a semicolon ';' to act as linebreak.
+ *     In reality, semicolon is not a recognized Stellar syntax element.
  *
  * The constraint against assignment statements inside of other Stellar expressions
  * may be relaxed in the future, depending on the evolution of Stellar.
@@ -80,9 +85,10 @@ import java.util.regex.Pattern;
  * stellarStatement field, and/or a Console sub-window in the config GUI.
  *
  * Examples of Stellar statement include:
- * 1. EXAMPLE ONE TODO
+ *
+ * 1. maxIssue := if issue1 < issue2 then issue2 else issue1
  * 
- * 2. EXAMPLE TWO TODO
+ * 2. isLocalIP := IN_SUBNET(orig_ip_addr, "192.168.0.0/16")
  *
  */
 public class StellarCustomProcessor implements CustomProcessorRuntime {
@@ -109,21 +115,34 @@ public class StellarCustomProcessor implements CustomProcessorRuntime {
 	public void initialize(Map<String, Object> config) {
 		LOG.info("Initializing + " + hortonworks.hdf.sam.custom.processor.stellar.StellarCustomProcessor.class.getName());
 
-		String stellarText = (String) config.get(CONFIG_STELLAR_STATEMENTS);
+		String stellarText = (String) config.getOrDefault(
+		        CONFIG_STELLAR_STATEMENTS, "");
     this.stellarStatements = new ArrayList<>();
     preParse(stellarText, stellarStatements);
 		LOG.info("The configured Stellar statements are: " + stellarStatements);
 
-		String outputFields = (String) config.get(CONFIG_ENRICHED_OUTPUT_FIELDS);
+		String outputFields = (String) config.getOrDefault(
+		        CONFIG_ENRICHED_OUTPUT_FIELDS, "");
 		String outputFieldsCleaned = StringUtils.deleteWhitespace(outputFields);
-		this.enrichedOutputFields = new HashSet<String>(Arrays.asList(
-            outputFieldsCleaned.split(",")));
+    if (outputFieldsCleaned.length() == 0) {
+      this.enrichedOutputFields = new HashSet<String>(0);
+    }
+    else {
+      this.enrichedOutputFields = new HashSet<String>(Arrays.asList(
+              outputFieldsCleaned.split(",")));
+    }
 		LOG.info("Enriched Output fields are: " + enrichedOutputFields);
 
-		String removedFields = (String) config.get(CONFIG_PROJECTION_REMOVED_FIELDS);
+    String removedFields = (String) config.getOrDefault(
+		        CONFIG_PROJECTION_REMOVED_FIELDS, "");
 		String removedFieldsCleaned = StringUtils.deleteWhitespace(removedFields);
-		this.projectionRemovedFields = new HashSet<String>(Arrays.asList(
-		        removedFieldsCleaned.split(",")));
+    if (removedFieldsCleaned.length() == 0) {
+      this.projectionRemovedFields = new HashSet<String>(0);
+    }
+    else {
+      this.projectionRemovedFields = new HashSet<String>(Arrays.asList(
+              removedFieldsCleaned.split(",")));
+    }
 		LOG.info("Projection Removed fields are: " + projectionRemovedFields);
 
 		//add here if needed: read and set Stellar config values into stellarContext.
@@ -138,11 +157,11 @@ public class StellarCustomProcessor implements CustomProcessorRuntime {
 	 *
 	 * Returns false if preParse error, otherwise true.
 	 */
-	private boolean preParse(String stellarText,
+	static boolean preParse(String stellarText,
                         List<StellarAssignment> stellarStatements) {
     if (stellarText == null) return true;
 	  StringBuilder partialLine = new StringBuilder();
-	  Pattern.compile("\n", Pattern.LITERAL)
+	  Pattern.compile("$|;", Pattern.MULTILINE)
             .splitAsStream(stellarText)
             .map(line -> line.trim())
             .forEachOrdered(line -> {
@@ -246,26 +265,56 @@ public class StellarCustomProcessor implements CustomProcessorRuntime {
 	@Override
 	public void validateConfig(Map<String, Object> config) throws ConfigException {
 
-    String outputFields = (String) config.get(CONFIG_ENRICHED_OUTPUT_FIELDS);
+    String outputFields = (String) config.getOrDefault(
+            CONFIG_ENRICHED_OUTPUT_FIELDS, "");
     String outputFieldsCleaned = StringUtils.deleteWhitespace(outputFields);
-    List<String> enrichedOutputFieldsList = Arrays.asList(
-            outputFieldsCleaned.split(","));
+    List<String> enrichedOutputFieldsList;
+    if (outputFieldsCleaned.length() == 0) {
+      enrichedOutputFieldsList = Arrays.asList(new String[0]);
+    }
+    else {
+      enrichedOutputFieldsList = Arrays.asList(
+              outputFieldsCleaned.split(","));
+    }
 
-    String removedFields = (String) config.get(CONFIG_PROJECTION_REMOVED_FIELDS);
+    String removedFields = (String) config.getOrDefault(
+            CONFIG_PROJECTION_REMOVED_FIELDS, "");
     String removedFieldsCleaned = StringUtils.deleteWhitespace(removedFields);
-    List<String> projectionRemovedFieldsList = Arrays.asList(
-            removedFieldsCleaned.split(","));
+    List<String> projectionRemovedFieldsList;
+    if (removedFieldsCleaned.length() == 0) {
+      projectionRemovedFieldsList = Arrays.asList(new String[0]);
+    }
+    else {
+      projectionRemovedFieldsList = Arrays.asList(
+              removedFieldsCleaned.split(","));
+    }
 
     if (!Collections.disjoint(enrichedOutputFieldsList, projectionRemovedFieldsList)) {
       throw new ConfigException("" + CONFIG_ENRICHED_OUTPUT_FIELDS + " and "
               + CONFIG_PROJECTION_REMOVED_FIELDS
               + " must not contain any of the same field names.");
     }
+    if (enrichedOutputFieldsList.contains("")) {
+      throw new ConfigException("Empty string occurs in "+CONFIG_ENRICHED_OUTPUT_FIELDS);
+    }
+    if (projectionRemovedFieldsList.contains("")) {
+      throw new ConfigException("Empty string occurs in "+CONFIG_PROJECTION_REMOVED_FIELDS);
+    }
 
-    String stellarText = (String) config.get(CONFIG_STELLAR_STATEMENTS);
+    String stellarText = (String) config.getOrDefault(
+            CONFIG_STELLAR_STATEMENTS, "");
     List<StellarAssignment> stellarStatementsList = new ArrayList<>();
     if (!preParse(stellarText, stellarStatementsList)) {
       throw new ConfigException("Last line in " + CONFIG_STELLAR_STATEMENTS + " ended with backslash");
+    }
+    for (int i=0; i<stellarStatementsList.size(); i++) {
+      if (stellarStatementsList.get(i).getStatement().contains(":=")) {
+        throw new ConfigException(String.format(
+                "Statement %d of %d in %s contains assignment (':=') in rhs expression;\n"
+                + "unallowed at this time.  Bad rhs expression: \n%s"
+                , i, stellarStatementsList.size(), CONFIG_STELLAR_STATEMENTS
+                , stellarStatementsList.get(i).getStatement()));
+      }
     }
 
     StellarProcessor processor = new StellarProcessor();
@@ -274,7 +323,7 @@ public class StellarCustomProcessor implements CustomProcessorRuntime {
         processor.validate(a.getStatement());
       }
     } catch (ParseException pe) {
-      throw new ConfigException("Stellar expression failed to parse cleanly, with null variables", pe);
+      throw new ConfigException("Stellar expression failed to parse cleanly, with all variables null.", pe);
     }
   }
 
