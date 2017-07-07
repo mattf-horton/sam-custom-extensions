@@ -4,7 +4,7 @@
   	<parent>
     	<groupId>hortonworks.hdf.sam.custom</groupId>
     	<artifactId>sam-stellar-extensions</artifactId>
-    	<version>0.4.0-SNAPSHOT</version>
+    	<version>0.4.1-SNAPSHOT</version>
   	</parent>
 
   	<artifactId>sam-stellar-processor</artifactId>
